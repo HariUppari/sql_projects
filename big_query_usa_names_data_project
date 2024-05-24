@@ -1,6 +1,5 @@
 
-Skills used:  CTE's, Temp Tables, Windows Functions, Aggregate Functions, Creating Views, Query Optimization , 
-              subqueries , Converting Data Types 
+Skills used:  CTE's, Temp Tables, Windows Functions, Aggregate Functions, Creating Views, Query Optimization , subqueries , Converting Data Types 
 
 ######## Question 1)  the name and gender of the babies  and then list the top 10 names in descending order.
 
