@@ -1,0 +1,61 @@
+######## Question 1)  the name and gender of the babies  and then list the top 10 names in descending order.
+
+
+select name , gender , sum(number) as total
+from bigquery-public-data.usa_names.usa_1910_2013
+group by name , gender
+order by total desc
+limit 10
+
+######## Question 2) the top 5 names for each state for each year.
+
+select state, year ,name , number
+from (
+  select state , year , name , number , ROW_NUMBER() 
+  OVER(partition by state , year order by number desc) as ranks
+  from bigquery-public-data.usa_names.usa_1910_2013
+) ranked_names
+where ranks <=5
+
+########### Question 3)  the most popular name for each decade
+
+
+select decade , gender,name , max(total) as max_total 
+from (select name , gender , (year/10)*10 as decade , sum(number) as total
+    from bigquery-public-data.usa_names.usa_1910_2013
+    group by name , gender , decade 
+) as decade_names
+group by decade , gender , name
+order by decade , gender , max_total desc
+
+########### Question 4)Top 3 Names by Year and Gender in Each State
+
+
+WITH RankedNames AS (
+    SELECT 
+        state, 
+        gender, 
+        year, 
+        name, 
+        number, 
+        RANK() OVER (PARTITION BY state, gender, year ORDER BY number DESC) as rank
+    FROM 
+        bigquery-public-data.usa_names.usa_1910_2013
+)
+SELECT 
+    state, 
+    gender, 
+    year, 
+    name, 
+    number
+FROM 
+    RankedNames
+WHERE 
+    rank <= 3
+ORDER BY 
+    state, 
+    gender, 
+    year, 
+    rank;
+
+
