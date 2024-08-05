@@ -1,7 +1,7 @@
 
 Skills used:  CTE's, Temp Tables, Windows Functions, Aggregate Functions, Creating Views, Query Optimization , subqueries , Converting Data Types 
 
-######## Question 1)  the name and gender of the babies  and then list the top 10 names in descending order.
+######## Question 1)   name and gender of the babies  and then list the top 10 names in descending order.
 
 
 select name , gender , sum(number) as total
@@ -10,7 +10,7 @@ group by name , gender
 order by total desc
 limit 10
 
-######## Question 2) the top 5 names for each state for each year.
+######## Question 2)  Top 5 names for each state for each year.
 
 select state, year ,name , number
 from (
@@ -20,45 +20,97 @@ from (
 ) ranked_names
 where ranks <=5
 
-########### Question 3)  the most popular name for each decade
+########### Question 3)   Top 10 names for each decade.
 
 
-select decade , gender,name , max(total) as max_total 
-from (select name , gender , (year/10)*10 as decade , sum(number) as total
-    from bigquery-public-data.usa_names.usa_1910_2013
-    group by name , gender , decade 
-) as decade_names
-group by decade , gender , name
-order by decade , gender , max_total desc
+WITH Decades AS (
+    SELECT 
+        CAST((year / 10) * 10 AS INT64) AS decade, 
+        name, 
+        number
+    FROM 
+        bigquery-public-data.usa_names.usa_1910_2013
+),
+DecadeRankedNames AS (
+    SELECT 
+        decade, 
+        name, 
+        SUM(number) AS total,
+        RANK() OVER (PARTITION BY decade ORDER BY SUM(number) DESC) AS rank
+    FROM 
+        Decades
+    GROUP BY 
+        decade, 
+        name
+)
+SELECT 
+    decade, 
+    name, 
+    total
+FROM 
+    DecadeRankedNames
+WHERE 
+    rank <= 10
+ORDER BY 
+    decade, 
+    rank;
 
-########### Question 4)Top 3 Names by Year and Gender in Each State
 
+########### Question 4)most popular baby name (the name with the highest number of occurrences) for each year and gender.
 
 WITH RankedNames AS (
     SELECT 
-        state, 
-        gender, 
         year, 
+        gender, 
         name, 
-        number, 
-        RANK() OVER (PARTITION BY state, gender, year ORDER BY number DESC) as rank
+        number,
+        RANK() OVER (PARTITION BY year, gender ORDER BY number DESC) AS rank
     FROM 
         bigquery-public-data.usa_names.usa_1910_2013
 )
 SELECT 
-    state, 
-    gender, 
     year, 
+    gender, 
     name, 
     number
 FROM 
     RankedNames
 WHERE 
-    rank <= 3
-ORDER BY 
-    state, 
-    gender, 
+    rank = 1;
+
+
+########### Question 5) number of unique names given each year.
+SELECT 
     year, 
-    rank;
+    COUNT(DISTINCT name) AS unique_names_count
+FROM 
+    bigquery-public-data.usa_names.usa_1910_2013
+GROUP BY 
+    year
+ORDER BY 
+    year;
+
+########### Question 6)calculating the year-over-year growth in the number of occurrences of the name "Liam" for each year.
+
+WITH NameTrend AS (
+    SELECT 
+        year, 
+        SUM(number) AS total_occurrences
+    FROM 
+        bigquery-public-data.usa_names.usa_1910_2013
+    WHERE 
+        name = 'Liam'
+    GROUP BY 
+        year
+)
+SELECT 
+    year, 
+    total_occurrences,
+    LAG(total_occurrences) OVER (ORDER BY year) AS previous_year_occurrences,
+    (total_occurrences - LAG(total_occurrences) OVER (ORDER BY year)) / NULLIF(LAG(total_occurrences) OVER (ORDER BY year), 0) AS year_over_year_growth
+FROM 
+    NameTrend
+ORDER BY 
+    year;
 
 
